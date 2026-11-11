@@ -1,18 +1,10 @@
 pipeline {
     agent any
-    
-    stages {
-        stage('Checkout') {
-            steps {
-                // Pulls the code from your GitHub repository
-                git branch: 'main', url: 'https://github.com/yashmandloiGE/dummy-repo.git'
-            }
-        }
 
+    stages {
         stage('Setup Environment') {
             steps {
-                // Creates a virtual environment and installs dependencies
-                // Note: If your Jenkins server runs on Windows, change 'sh' to 'bat'
+                // If running on Linux/macOS agent
                 sh '''
                 python3 -m venv venv
                 . venv/bin/activate
@@ -24,7 +16,6 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                // Activates the virtual environment and runs all tests
                 sh '''
                 . venv/bin/activate
                 pytest
@@ -36,7 +27,6 @@ pipeline {
     post {
         always {
             echo "Pipeline execution complete."
-            // You can add JUnit test result publishing here later if needed
         }
     }
 }
