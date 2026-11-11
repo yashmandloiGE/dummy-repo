@@ -1,4 +1,4 @@
-name: Playwright Tests
+name: Parallel Playwright Tests
 
 on:
   push:
@@ -12,9 +12,16 @@ permissions:
   pull-requests: write
 
 jobs:
-  test:
-    name: Run Playwright Tests
-    runs-on: ubuntu-latest
+  # MATRIX EXECUTION: Runs 3 parallel jobs concurrently
+  test-matrix:
+    name: Test on ${{ matrix.browser }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false # Prevents cancelling other matrix jobs if one fails
+      matrix:
+        os: [ubuntu-latest]
+        browser: [chromium, firefox, webkit]
 
     steps:
       - name: Checkout repository
@@ -31,35 +38,26 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Install Playwright Browsers & Dependencies
-        run: npx playwright install --with-deps
+      # Install only the specific browser for this matrix job to save install time
+      - name: Install Playwright Browser (${{ matrix.browser }})
+        run: npx playwright install ${{ matrix.browser }} --with-deps
 
-      # Run tests, output JUnit XML, and generate Playwright HTML report
-      - name: Run Pytest suite
-        run: pytest --junitxml=test-results/results.xml --tracing=retain-on-failure
+      # Run Pytest in parallel using all available CPU cores (-n auto)
+      - name: Run Pytest suite in Parallel
+        run: pytest -n auto --browser ${{ matrix.browser }} --junitxml=test-results/results-${{ matrix.browser }}.xml
 
       - name: Publish Test Report
         uses: dorny/test-check@v1
         if: always()
         with:
-          name: Pytest Results
-          path: test-results/results.xml
+          name: Pytest Results (${{ matrix.browser }})
+          path: test-results/results-${{ matrix.browser }}.xml
           reporter: java-junit
 
-      # Artifact Upload 1: Always upload HTML / Execution Reports
-      - name: Upload HTML Test Report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: playwright-html-report
-          path: playwright-report/
-          retention-days: 14
-
-      # Artifact Upload 2: Upload screenshots & traces only on failure
-      - name: Upload Failure Artifacts (Traces & Screenshots)
-        uses: actions/upload-artifact@v4
+      - name: Upload Failure Artifacts
         if: failure()
+        uses: actions/upload-artifact@v4
         with:
-          name: playwright-failure-artifacts
+          name: playwright-failure-${{ matrix.browser }}
           path: test-results/
           retention-days: 7
