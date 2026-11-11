@@ -4,10 +4,10 @@ pipeline {
     stages {
         stage('Setup Environment') {
             steps {
-                // If running on Linux/macOS agent
-                sh '''
-                python3 -m venv venv
-                . venv/bin/activate
+                // Use 'bat' for Windows agents instead of 'sh'
+                bat '''
+                python -m venv venv
+                call venv\\Scripts\\activate.bat
                 pip install pytest pytest-playwright playwright
                 playwright install chromium
                 '''
@@ -16,8 +16,8 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                sh '''
-                . venv/bin/activate
+                bat '''
+                call venv\\Scripts\\activate.bat
                 pytest
                 '''
             }
